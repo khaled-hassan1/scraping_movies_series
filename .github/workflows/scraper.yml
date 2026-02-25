@@ -27,7 +27,7 @@ jobs:
         run: |
           # هنا بنشغل كل السكريبتات اللي عندنا
           python akoam_movies_scraper.py
-          # python akoam_series_scraper.py
+          python akoam_series_scraper.py
           # python fushaar_scraper.py
           python main.py 
 
