@@ -6,7 +6,7 @@ from datetime import datetime
 async def scrape_akoam_series(max_pages=None):
     all_series = []
     browser_instance = None
-    
+     
     try:
         async with async_playwright() as p:
             # تشغيل المتصفح
