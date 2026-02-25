@@ -105,6 +105,6 @@ async def scrape_akoam_series(max_pages=None):
 
 if __name__ == "__main__":
     try:
-        asyncio.run(scrape_akoam_series())
+        asyncio.run(scrape_akoam_series(max_pages=1))
     except KeyboardInterrupt:
         pass
