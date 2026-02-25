@@ -9,7 +9,7 @@ async def scrape_akoam_series(max_pages=None):
      
     try:
         async with async_playwright() as p:
-            # تشغيل المتصفح
+            # تشغيل المتصفح 
             browser_instance = await p.chromium.launch(headless=True)
             context = await browser_instance.new_context(
                 viewport={'width': 1280, 'height': 1000},
