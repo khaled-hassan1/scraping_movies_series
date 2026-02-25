@@ -2,8 +2,8 @@ name: Global Media Scraper
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # أسبوعياً
-  workflow_dispatch: # يدوياً
+    - cron: '0 0 * * 0' # أسبوعياً (الأحد الساعة 12 منتصف الليل)
+  workflow_dispatch: # تشغيل يدوي
 
 jobs:
   scrape_all:
@@ -12,6 +12,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          # هذا السطر يضمن سحب كل تاريخ الملفات لتجنب مشاكل الـ Push
+          fetch-depth: 0 
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -25,17 +28,27 @@ jobs:
 
       - name: Run Scrapers
         run: |
-          # هنا بنشغل كل السكريبتات اللي عندنا
+          # تشغيل كل ملفات السحب
           python akoam_movies_scraper.py
           python akoam_series_scraper.py
           # python fushaar_scraper.py
+          
+          # دمج كل النتائج في ملف all_data.json
           python main.py 
 
       - name: Commit and Push Changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          # إضافة كل ملفات الـ JSON الناتجة
+          
+          # إضافة الملفات
           git add *.json 
+          
+          # عمل الـ Commit
           git commit -m "Update all media data: $(date)" || exit 0
-          git push
+          
+          # الخطوة الأهم: سحب التغييرات الجديدة قبل الرفع لتجنب خطأ 403/Rejected
+          git pull origin main --rebase
+          
+          # الرفع النهائي
+          git push origin main
