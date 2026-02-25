@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 async def scrape_akoam_series(max_pages=None):
-    all_series = []  
+    all_series = []
     browser_instance = None
     
     try:
