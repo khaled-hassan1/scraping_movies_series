@@ -44,7 +44,7 @@ async def scrape_laroza_movies(max_pages_per_category=None):
                         items = await page.query_selector_all('div.boxItem')
                         if not items: break
 
-                        for item in items:
+                        for item in items: 
                             try:
                                 title_tag = await item.query_selector('h3')
                                 title = await title_tag.inner_text() if title_tag else ""
