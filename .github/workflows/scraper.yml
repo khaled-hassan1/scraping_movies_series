@@ -31,6 +31,7 @@ jobs:
           # تشغيل كل ملفات السحب
           python akoam_movies_scraper.py
           python akoam_series_scraper.py
+          python mycima_movies_scraper.py
           # python fushaar_scraper.py
           
           # دمج كل النتائج في ملف all_data.json
