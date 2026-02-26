@@ -64,34 +64,4 @@ jobs:
           # استراتيجية Rebase ذكية: لو حدث تعارض، اعتمد الملفات الجديدة فوراً (X ours)
           git pull origin main --rebase -X ours
           
-          git push origin main          # تشغيل السكريبتات بالترتيب مع ضمان استمرار العملية حتى لو سقط موقع
-         
-          # python akoam_movies_scraper.py || true
-          # python akoam_series_scraper.py || true
-          python mycima_movies_scraper.py || true
-          python mycima_series_scraper.py || true
-          python fushaar_movies_scraper.py || true
-          python fushaar_series_scraper.py || true
-          python egibest_movies_scraper.py || true
-          python egibest_series_scraper.py || true
-          python laroza_movies_scraper.py || true
-          python laroza_series_scraper.py || true
-          
-          echo "🔗 دمج الملفات في قاعدة البيانات النهائية..."
-          python main.py || echo "⚠️ فشل في الدمج النهائي"
-
-      - name: Commit and Push Changes
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          git fetch origin main
-          git add *.json
-          
-          # الالتزام بالتغييرات فقط في حال وجود ملفات جديدة
-          git commit -m "Update all media data: $(date +'%Y-%m-%d %H:%M')" || exit 0
-          
-          # استراتيجية Rebase ذكية: لو حدث تعارض، اعتمد الملفات الجديدة فوراً (X ours)
-          git pull origin main --rebase -X ours
-          
           git push origin main
