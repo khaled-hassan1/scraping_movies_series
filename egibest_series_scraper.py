@@ -12,105 +12,50 @@ async def scrape_egibest_series(max_pages=None):
     try:
         async with async_playwright() as p:
             browser_instance = await p.chromium.launch(headless=True)
-            context = await browser_instance.new_context(
-                viewport={'width': 1280, 'height': 1000},
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
-            page = await context.new_page()
-            
-            # حظر الصور لتسريع العملية
+            page = await browser_instance.new_page()
             await page.route("**/*.{png,jpg,jpeg,webp,gif}", lambda route: route.abort())
 
             current_page = 1
-            while True:
-                # التحقق من الحد الأقصى للصفحات (إذا وُجد)
-                if max_pages is not None and current_page > max_pages:
-                    break
-                    
+            while max_pages is None or current_page <= max_pages:
                 url = f"https://egibest.live/category/series/page/{current_page}/"
                 print(f"📡 جاري سحب مسلسلات إيجي بست (صفحة {current_page})...")
                 
                 try:
                     response = await page.goto(url, wait_until="commit", timeout=60000)
-                    
-                    if response.status == 404:
-                        print(f"🛑 وصلنا لآخر صفحة متاح عند {current_page-1}")
-                        break
+                    if response.status == 404: break
 
-                    # انتظار تحميل العناصر
-                    await page.wait_for_selector('a.postBlockCol', timeout=15000)
-                    items = await page.query_selector_all('a.postBlockCol')
-                    
+                    items = await page.query_selector_all('div.item')
                     if not items: break
 
                     for item in items:
                         try:
-                            # جلب العنوان
-                            title = await item.get_attribute('title')
-                            if not title:
-                                h3 = await item.query_selector('h3.title')
-                                title = await h3.inner_text() if h3 else "بدون عنوان"
-                            
-                            if any(word in title.lower() for word in blacklist):
-                                continue
+                            title_tag = await item.query_selector('span.title')
+                            title = await title_tag.inner_text()
+                            if any(word in title.lower() for word in blacklist): continue
 
-                            href = await item.get_attribute('href')
+                            href = await (await item.query_selector('a')).get_attribute('href')
                             img_tag = await item.query_selector('img')
-                            image_url = await img_tag.get_attribute('src') if img_tag else ""
-                            
-                            # التقييم
-                            rating_val = 0.0
-                            rating_tag = await item.query_selector('i.rating i')
-                            if rating_tag:
-                                r_text = await rating_tag.inner_text()
-                                rating_val = float(r_text.strip()) if r_text.strip() else 0.0
+                            image_url = await img_tag.get_attribute('src')
 
-                            # تنظيف الاسم والسنة
-                            clean_name = title.replace("مشاهدة", "").replace("إيجي بست", "").replace("مسلسل", "").strip()
+                            clean_name = title.replace("مسلسل", "").strip()
                             year_match = re.search(r'(\d{4})', clean_name)
                             year = int(year_match.group(1)) if year_match else 2026
-                            
+
                             all_series.append({
-                                "name": f"[مسلسل] {clean_name}",
-                                "url": href,
-                                "image_url": image_url,
-                                "year": year,
-                                "genre": "مسلسلات",
-                                "rating": rating_val,
+                                "name": f"[EgiBest] {clean_name}",
+                                "url": href, "image_url": image_url, "year": year,
+                                "genre": "مسلسلات", "rating": 0.0,
                                 "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
                             })
-                        except:
-                            continue
-                    
+                        except: continue
                     current_page += 1
-                    await asyncio.sleep(0.5) # راحة بسيطة للموقع
-                    
-                except Exception as e:
-                    print(f"⚠️ توقف عند الصفحة {current_page}")
-                    break
-
-    except asyncio.CancelledError:
-        print("\n⚠️ تم قطع السحب يدوياً.. جاري حفظ البيانات المجمعة...")
-    except Exception as e:
-        print(f"\n❌ حدث خطأ غير متوقع: {e}")
-    
+                except: break
     finally:
-        # الحفظ النهائي في كل الحالات
         if all_series:
             with open('egibest_series.json', 'w', encoding='utf-8') as f:
                 json.dump(all_series, f, ensure_ascii=False, indent=4)
-            print(f"✅ تم حفظ {len(all_series)} مسلسل من إيجي بست بنجاح.")
-        else:
-            print("ℹ️ لم يتم العثور على أي بيانات لحفظها.")
-        
-        if browser_instance:
-            await browser_instance.close()
-
-    return all_series
+            print(f"✅ تم حفظ {len(all_series)} مسلسل من إيجي بست.")
+        if browser_instance: await browser_instance.close()
 
 if __name__ == "__main__":
-    try:
-        # اتركها فارغة لسحب كل الصفحات، أو ضع رقماً مثل (max_pages=10)
-        asyncio.run(scrape_egibest_series())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(scrape_egibest_series())

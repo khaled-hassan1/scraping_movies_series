@@ -35,8 +35,9 @@ jobs:
           echo "🚀 بدء سحب البيانات من جميع المواقع..."
           
           # تشغيل السكريبتات بالترتيب مع ضمان استمرار العملية حتى لو سقط موقع
-          python akoam_movies_scraper.py || true
-          python akoam_series_scraper.py || true
+         
+          # python akoam_movies_scraper.py || true
+          # python akoam_series_scraper.py || true
           python mycima_movies_scraper.py || true
           python mycima_series_scraper.py || true
           python fushaar_movies_scraper.py || true
