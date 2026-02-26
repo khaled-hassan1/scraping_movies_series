@@ -38,14 +38,14 @@ jobs:
          
           # python akoam_movies_scraper.py || true
           # python akoam_series_scraper.py || true
-          python mycima_movies_scraper.py || true
-          python mycima_series_scraper.py || true
-          python fushaar_movies_scraper.py || true
-          python fushaar_series_scraper.py || true
+          # python mycima_movies_scraper.py || true
+          # python mycima_series_scraper.py || true
+          # python fushaar_movies_scraper.py || true
+          # python fushaar_series_scraper.py || true
           python egibest_movies_scraper.py || true
           python egibest_series_scraper.py || true
-          python laroza_movies_scraper.py || true
-          python laroza_series_scraper.py || true
+          # python laroza_movies_scraper.py || true
+          # python laroza_series_scraper.py || true
           
           echo "🔗 دمج الملفات في قاعدة البيانات النهائية..."
           python main.py || echo "⚠️ فشل في الدمج النهائي"
