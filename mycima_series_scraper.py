@@ -77,4 +77,4 @@ async def scrape_mycima_series(max_pages=1):
             print(f"🏁 تم الحفظ بنجاح!")
 
 if __name__ == "__main__":
-    asyncio.run(scrape_mycima_series(max_pages=1))
+    asyncio.run(scrape_mycima_series())
