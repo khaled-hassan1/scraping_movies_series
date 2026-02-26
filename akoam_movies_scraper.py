@@ -26,7 +26,7 @@ async def scrape_akoam(max_pages=None):
                 print(f"📡 جاري سحب الصفحة {current_page} من أكوام...")
                 
                 try:
-                    response = await page.goto(url, wait_until="networkidle", timeout=60000)
+                    response = await page.goto(url, wait_until="domcontentloaded", timeout=90000)
                     
                     if response.status == 404:
                         print(f"🛑 وصلنا لنهاية الصفحات عند الصفحة {current_page-1}")
