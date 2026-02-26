@@ -7,104 +7,60 @@ import re
 async def scrape_mycima_safe(max_pages=None):
     all_movies = [] 
     browser_instance = None
-    # كلمات الحظر
     blacklist = ["+18", "للكبار فقط", "افلام جنس", "جنسي", "sex", "adult", "18+"]
     
     try:
         async with async_playwright() as p:
             browser_instance = await p.chromium.launch(headless=True)
-            context = await browser_instance.new_context(
-                viewport={'width': 1280, 'height': 800},
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
-            page = await context.new_page()
-            
-            # تسريع العملية بمنع الصور
+            page = await browser_instance.new_page()
             await page.route("**/*.{png,jpg,jpeg,webp,gif}", lambda route: route.abort())
 
             current_page = 1
             while True:
-                # التحقق من سقف الصفحات لتجنب أخطاء الـ NoneType
+                # حل مشكلة الـ NoneType هنا
                 if max_pages is not None and current_page > max_pages:
                     break
-                    
+
                 url = f"https://my-cima.pro/topvideos-mycima.php?&page={current_page}"
-                print(f"📡 جاري سحب ماي سيما (صفحة {current_page})...")
+                print(f"📡 جاري سحب ماي سيما أفلام (صفحة {current_page})...")
                 
                 try:
                     response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-                    
-                    if response and response.status == 404:
-                        print(f"🛑 وصلنا لآخر صفحة متاح عند {current_page-1}")
-                        break
+                    if response and response.status == 404: break
 
-                    # انتظار تحميل العناصر
-                    await page.wait_for_selector('li.col-xs-6', timeout=15000)
                     items = await page.query_selector_all('li.col-xs-6')
-                    
                     if not items: break
 
                     for item in items:
-                        try:
-                            title_tag = await item.query_selector('h3 a')
-                            if not title_tag: continue
-                            
-                            full_title = await title_tag.get_attribute('title')
-                            
-                            # الفلترة الذكية
-                            if any(word in full_title.lower() for word in blacklist):
-                                continue
+                        title_tag = await item.query_selector('h3 a')
+                        full_title = await title_tag.get_attribute('title')
+                        if any(word in full_title.lower() for word in blacklist): continue
+                        
+                        clean_name = full_title.replace("مشاهدة", "").replace("ماي سيما", "").strip()
+                        href = await title_tag.get_attribute('href')
+                        img_tag = await item.query_selector('img')
+                        image_url = await img_tag.get_attribute('src') if img_tag else ""
+                        
+                        year_match = re.search(r'(\d{4})', clean_name)
+                        year = int(year_match.group(1)) if year_match else 2026
 
-                            clean_name = full_title.replace("مشاهدة", "").replace("ماي سيما", "").strip()
-                            href = await title_tag.get_attribute('href')
-                            
-                            img_tag = await item.query_selector('img')
-                            image_url = await img_tag.get_attribute('src') if img_tag else ""
-                            
-                            year_match = re.search(r'(\d{4})', clean_name)
-                            year = int(year_match.group(1)) if year_match else 2025
-
-                            all_movies.append({
-                                "name": f"[ماي سيما] {clean_name}",
-                                "url": href,
-                                "image_url": image_url,
-                                "year": year,
-                                "genre": "أفلام",
-                                "rating": 0.0,
-                                "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-                            })
-                        except:
-                            continue
-                    
+                        all_movies.append({
+                            "name": f"[ماي سيما] {clean_name}",
+                            "url": href,
+                            "image_url": image_url,
+                            "year": year,
+                            "genre": "أفلام",
+                            "rating": 0.0,
+                            "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                        })
                     current_page += 1
-                    await asyncio.sleep(0.5) # استراحة بسيطة
-
-                except Exception as e:
-                    print(f"⚠️ انتهت الصفحات أو حدث تعليق في صفحة {current_page}")
-                    break
-
-    except asyncio.CancelledError:
-        print("\n⚠️ تم إيقاف السحب يدوياً (Ctrl+C).. جاري حفظ البيانات المجمعة...")
-    except Exception as e:
-        print(f"\n❌ حدث خطأ غير متوقع: {e}")
-    
+                except: break
     finally:
-        # الحفظ النهائي المضمون في كل الحالات
         if all_movies:
             with open('mycima_movies.json', 'w', encoding='utf-8') as f:
                 json.dump(all_movies, f, ensure_ascii=False, indent=4)
-            print(f"✅ تم حفظ {len(all_movies)} فيلم من ماي سيما بنجاح.")
-        else:
-            print("ℹ️ لم يتم جمع أي بيانات لحفظها.")
-            
-        if browser_instance:
-            await browser_instance.close()
-
-    return all_movies
+            print(f"✅ تم حفظ {len(all_movies)} فيلم من ماي سيما.")
+        if browser_instance: await browser_instance.close()
 
 if __name__ == "__main__":
-    try:
-        # اتركها فارغة لسحب كل الصفحات، أو حدد رقماً (مثلاً max_pages=10)
-        asyncio.run(scrape_mycima_safe())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(scrape_mycima_safe())

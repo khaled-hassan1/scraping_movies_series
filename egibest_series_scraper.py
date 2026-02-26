@@ -68,7 +68,7 @@ async def scrape_egibest_series(max_pages=None):
                             # تنظيف الاسم والسنة
                             clean_name = title.replace("مشاهدة", "").replace("إيجي بست", "").replace("مسلسل", "").strip()
                             year_match = re.search(r'(\d{4})', clean_name)
-                            year = int(year_match.group(1)) if year_match else 2025
+                            year = int(year_match.group(1)) if year_match else 2026
                             
                             all_series.append({
                                 "name": f"[مسلسل] {clean_name}",

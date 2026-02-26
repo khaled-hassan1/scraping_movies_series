@@ -72,7 +72,7 @@ async def scrape_laroza_series(max_pages=None):
                             # تنظيف الاسم واستخراج السنة
                             clean_name = full_title.replace("مشاهدة", "").replace("لاروزا", "").replace("مسلسل", "").strip()
                             year_match = re.search(r'(\d{4})', clean_name)
-                            year = int(year_match.group(1)) if year_match else 2025
+                            year = int(year_match.group(1)) if year_match else 2026
                             
                             all_series.append({
                                 "name": f"[لاروزا] {clean_name}",

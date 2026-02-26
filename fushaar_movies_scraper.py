@@ -69,7 +69,7 @@ async def scrape_fushaar(max_pages=None):
                             # 3. استخراج السنة وتنظيف الاسم
                             clean_name = full_title.replace("مشاهدة", "").replace("فشار", "").replace("فيلم", "").strip()
                             year_match = re.search(r'(\d{4})', clean_name)
-                            year = int(year_match.group(1)) if year_match else 2025
+                            year = int(year_match.group(1)) if year_match else 2026
                             
                             all_media.append({
                                 "name": f"[فشار] {clean_name}",

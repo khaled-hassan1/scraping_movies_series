@@ -29,57 +29,50 @@ async def scrape_laroza_movies(max_pages_per_category=None):
             )
             page = await context.new_page()
             
-            # منع الصور الثقيلة لتسريع العملية (اختياري)
-            # await page.route("**/*.{png,jpg,jpeg,webp,gif}", lambda route: route.abort())
+            # تسريع العملية عبر منع الصور والخطوط
+            await page.route("**/*.{png,jpg,jpeg,webp,gif,woff,ttf}", lambda route: route.abort())
 
             for base_url in movie_categories:
-                category_name = base_url.split('=')[-1]
+                category_id = base_url.split('=')[-1]
                 current_page = 1
                 
                 while True:
-                    # التحقق من سقف الصفحات لكل قسم
                     if max_pages_per_category is not None and current_page > max_pages_per_category:
                         break
 
                     url = f"{base_url}&page={current_page}"
-                    print(f"📡 سحب قسم [{category_name}] - صفحة {current_page}...")
+                    print(f"📡 سحب لاروزا أفلام [{category_id}] - صفحة {current_page}...")
                     
                     try:
                         response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                        if response and response.status == 404: break
+
+                        # تمرير بسيط لتحفيز ظهور العناصر
+                        await page.evaluate("window.scrollBy(0, 800)")
                         
-                        if response and response.status == 404:
-                            break
-
-                        # تمرير بسيط لتفعيل الـ Lazy Load للصور
-                        await page.evaluate("window.scrollBy(0, 1000)")
-                        await asyncio.sleep(0.5)
-
-                        await page.wait_for_selector('li.col-xs-6', timeout=10000)
+                        # التحقق من وجود عناصر
                         items = await page.query_selector_all('li.col-xs-6')
-
-                        if not items:
-                            break
+                        if not items: break
 
                         for item in items:
                             try:
                                 link_tag = await item.query_selector('h3 a')
                                 if not link_tag: continue
                                 
-                                full_title = await link_tag.get_attribute('title')
-                                if not full_title:
-                                    full_title = await link_tag.inner_text()
+                                full_title = await link_tag.get_attribute('title') or await link_tag.inner_text()
                                 
-                                # فلتر الأمان
                                 if any(word in full_title.lower() for word in blacklist):
                                     continue
 
                                 href = await link_tag.get_attribute('href')
                                 img_tag = await item.query_selector('img')
+                                
+                                # جلب الصورة بذكاء (Lazy Loading)
                                 image_url = ""
                                 if img_tag:
                                     image_url = await img_tag.get_attribute('data-src') or \
                                                 await img_tag.get_attribute('data-original') or \
-                                                await img_tag.get_attribute('src')
+                                                await img_tag.get_attribute('src') or ""
 
                                 clean_name = full_title.replace("مشاهدة", "").replace("فيلم", "").replace("اون لاين", "").replace("لاروزا", "").strip()
                                 year_match = re.search(r'(\d{4})', clean_name)
@@ -88,41 +81,32 @@ async def scrape_laroza_movies(max_pages_per_category=None):
                                     "name": f"[لاروزا] {clean_name}",
                                     "url": href if href.startswith('http') else f"https://laroza.makeup/{href}",
                                     "image_url": image_url,
-                                    "year": int(year_match.group(1)) if year_match else 2025,
+                                    "year": int(year_match.group(1)) if year_match else 2026,
                                     "genre": "أفلام",
                                     "rating": 0.0,
                                     "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
                                 })
-                            except:
-                                continue
+                            except: continue
                         
                         current_page += 1
                         
                     except Exception as e:
-                        print(f"⚠️ انتهى القسم أو حدث خطأ: {str(e)[:40]}")
+                        print(f"⚠️ خطأ في الصفحة {current_page}: {str(e)[:30]}")
                         break 
 
-    except asyncio.CancelledError:
-        print("\n⚠️ تم إيقاف السحب يدوياً.. جاري حفظ البيانات المجمعة...")
-    except Exception as e:
-        print(f"\n❌ حدث خطأ غير متوقع: {e}")
-    
     finally:
         if all_movies:
-            # تنظيف التكرار الناتج عن وجود الفيلم في أكثر من قسم
+            # إزالة التكرار بناءً على الرابط (URL)
             unique_movies = list({m['url']: m for m in all_movies}.values())
             with open('laroza_movies.json', 'w', encoding='utf-8') as f:
                 json.dump(unique_movies, f, ensure_ascii=False, indent=4)
-            print(f"✅ تم حفظ {len(unique_movies)} فيلم فريد من لاروزا.")
-        else:
-            print("ℹ️ لم يتم جمع أي بيانات.")
-            
+            print(f"✅ تم حفظ {len(unique_movies)} فيلم فريد بنجاح.")
+        
         if browser_instance:
             await browser_instance.close()
 
 if __name__ == "__main__":
     try:
-        # لسحب كل شيء اتركها فارغة، أو حدد رقماً للصفحات لكل قسم
-        asyncio.run(scrape_laroza_movies(max_pages_per_category=None))
+        asyncio.run(scrape_laroza_movies())
     except KeyboardInterrupt:
         pass

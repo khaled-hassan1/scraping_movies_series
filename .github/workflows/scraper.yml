@@ -3,21 +3,21 @@ name: Global Media Scraper
 on:
   schedule:
     - cron: '0 0 * * 0' # تشغيل تلقائي كل أحد الساعة 12 منتصف الليل
-  workflow_dispatch: # إمكانية التشغيل اليدوي من تبويب Actions
+  workflow_dispatch: # إمكانية التشغيل اليدوي
 
 jobs:
   scrape_all:
     runs-on: ubuntu-latest
-
-    # صلاحيات الكتابة ضرورية لرفع ملفات JSON الجديدة
+    timeout-minutes: 300 # 5 ساعات كاملة ليعمل السحب براحته دون انقطاع
+    
     permissions:
       contents: write
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # تحديث للإصدار الرابع (أسرع وأكثر أماناً)
         with:
-          fetch-depth: 0 # سحب كامل تاريخ الالتزامات لضمان نجاح عملية الـ Rebase
+          fetch-depth: 0 
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,13 +28,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install playwright requests beautifulsoup4
-          playwright install chromium
+          python -m playwright install chromium
 
       - name: Run All Scrapers
         run: |
-          echo "🚀 بدء عملية سحب البيانات من جميع المواقع..."
+          echo "🚀 بدء سحب البيانات من جميع المواقع..."
           
-          # تشغيل سكريبتات الأفلام والمسلسلات (إضافة || true لضمان استمرار العمل في حال تعطل أحد المواقع)
+          # تشغيل السكريبتات بالترتيب مع ضمان استمرار العملية حتى لو سقط موقع
           python akoam_movies_scraper.py || true
           python akoam_series_scraper.py || true
           python mycima_movies_scraper.py || true
@@ -46,28 +46,21 @@ jobs:
           python laroza_movies_scraper.py || true
           python laroza_series_scraper.py || true
           
-          # دمج النتائج في الملف النهائي
-          python main.py || echo "⚠️ فشل في دمج البيانات النهائية"
+          echo "🔗 دمج الملفات في قاعدة البيانات النهائية..."
+          python main.py || echo "⚠️ فشل في الدمج النهائي"
 
       - name: Commit and Push Changes
         run: |
-          # إعداد هوية البوت الذي سيقوم بالرفع
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 1. جلب التحديثات من السيرفر (Fetch) بدون دمجها لتجنب الصدام المباشر
           git fetch origin main
-
-          # 2. إضافة كافة ملفات JSON الناتجة
           git add *.json
           
-          # 3. عمل التزام (Commit) محلي بالتغييرات الجديدة
+          # الالتزام بالتغييرات فقط في حال وجود ملفات جديدة
           git commit -m "Update all media data: $(date +'%Y-%m-%d %H:%M')" || exit 0
           
-          # 4. حل التعارض الجذري:
-          # نستخدم pull --rebase مع استراتيجية -X ours 
-          # هذا السطر يعني: لو حدث تعارض في ملفات الـ JSON، احذف القديم واعتمد ملفات السكريبت الحالية فوراً
+          # استراتيجية Rebase ذكية: لو حدث تعارض، اعتمد الملفات الجديدة فوراً (X ours)
           git pull origin main --rebase -X ours
-
-          # 5. محاولة الرفع النهائي للسيرفر
+          
           git push origin main

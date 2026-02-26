@@ -51,7 +51,7 @@ async def scrape_egibest(max_pages=None):
                                 "name": f"[EgiBest] {clean_name}",
                                 "url": href,
                                 "image_url": image_url,
-                                "year": int(year_match.group(1)) if year_match else 2025,
+                                "year": int(year_match.group(1)) if year_match else 2026,
                                 "genre": "أفلام",
                                 "rating": 0.0,
                                 "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
