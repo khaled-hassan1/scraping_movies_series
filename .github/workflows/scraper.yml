@@ -41,14 +41,18 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # إضافة الملفات
+          # 1. سحب آخر التغييرات من جيت هوب
+          git fetch origin main
+          
+          # 2. إضافة الملفات الجديدة
           git add *.json 
           
-          # عمل الـ Commit
+          # 3. عمل الـ Commit
           git commit -m "Update all media data: $(date)" || exit 0
           
-          # الخطوة الأهم: سحب التغييرات الجديدة قبل الرفع لتجنب خطأ 403/Rejected
-          git pull origin main --rebase
+          # 4. حل التعارضات لصالح الملفات اللي السكرابر لسه مطلعها (The trick)
+          # هذا الأمر يخبر جيت: لو لقيت تعارض في الملفات، خد النسخة بتاعت الأكشن (ours)
+          git pull origin main --rebase -X ours
           
-          # الرفع النهائي
+          # 5. الرفع النهائي
           git push origin main
