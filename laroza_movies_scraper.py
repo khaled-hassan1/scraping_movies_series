@@ -1,75 +1,102 @@
 import asyncio
 from playwright.async_api import async_playwright
 import json
+from datetime import datetime
+import re
 
-async def scrape_laroza():
+async def scrape_laroza_movies(max_pages_per_category=None): # يمكنك تغيير عدد الصفحات هنا
+    all_movies = [] 
+    blacklist = ["+18", "للكبار فقط", "جنس", "sex", "adult", "18+"]
+    
+    movie_categories = [
+        "https://laroza.makeup/category.php?cat=all_movies_13",
+        "https://laroza.makeup/category.php?cat=arabic-movies33",
+        "https://laroza.makeup/category.php?cat=indian-movies9",
+        "https://laroza.makeup/category.php?cat=6-asian-movies",
+        "https://laroza.makeup/category.php?cat=anime-movies-7",
+        "https://laroza.makeup/category.php?cat=7-aflammdblgh",
+        "https://laroza.makeup/category.php?cat=8-aflam3isk",
+        "https://laroza.makeup/category.php?cat=masrh-5"
+    ]
+
     async with async_playwright() as p:
-        # تشغيل المتصفح (headless=True للسرعة، أو False لو عايز تراقبه)
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
-        
-        url = "https://laroza.hair/home.24"
-        print(f"🚀 جاري الدخول إلى لاروزا: {url}")
-        
-        try:
-            await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-        except:
-            print("⚠️ الموقع استغرق وقت طويل، سأحاول البدء بالجمع...")
 
-        movies_data = []
-        titles_seen = set()
-
-        # التمرير لجلب أكبر كمية من المحتوى
-        print("⏬ جاري التمرير العميق لجلب المحتوى...")
-        for i in range(20):  # زود الرقم ده لـ 100 لو عايز تجيب "كله" فعلياً
-            await page.mouse.wheel(0, 2000)
-            await asyncio.sleep(1.5)
+        for base_url in movie_categories:
+            category_name = base_url.split('=')[-1]
             
-            if i % 5 == 0:
-                print(f"🔄 جاري المعالجة في التمريرة رقم {i}...")
-
-        # استخراج الكروت (في لاروزا الكروت غالباً تكون داخل div بكلاس يحتوي على item أو video-box)
-        # بناءً على بنية الموقع، سنبحث عن الروابط التي تحتوي على بوستر الفيلم
-        cards = await page.query_selector_all('.Video-Content, .BoxItem, a:has(img)')
-
-        print(f"🔎 تم العثور على {len(cards)} عنصر محتمل. جاري استخراج البيانات...")
-
-        for card in cards:
-            try:
-                # جلب الرابط
-                href = await card.get_attribute('href')
-                if not href:
-                    link_tag = await card.query_selector('a')
-                    href = await link_tag.get_attribute('href') if link_tag else None
+            for current_page in range(1, max_pages_per_category + 1):
+                # دمج رقم الصفحة مع رابط القسم
+                url = f"{base_url}&page={current_page}"
+                print(f"📡 سحب قسم [{category_name}] - صفحة {current_page}...")
                 
-                # جلب الصورة والعنوان
-                img_tag = await card.query_selector('img')
-                if img_tag and href:
-                    title = await img_tag.get_attribute('alt') or await img_tag.get_attribute('title')
-                    img_url = await img_tag.get_attribute('src') or await img_tag.get_attribute('data-src')
+                try:
+                    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                    
+                    # التمرير لضمان ظهور روابط الصور
+                    for _ in range(3):
+                        await page.mouse.wheel(0, 1500)
+                        await asyncio.sleep(0.3)
 
-                    if title and title not in titles_seen:
-                        # تنظيف العناوين من كلمات مثل "مشاهدة" أو "تحميل" ليكون التطبيق احترافي
-                        clean_title = title.replace("مشاهدة", "").replace("تحميل", "").replace("فيلم", "").strip()
-                        
-                        movies_data.append({
-                            "title": clean_title,
-                            "image": img_url if img_url.startswith('http') else f"https:{img_url}",
-                            "url": href if href.startswith('http') else f"https://laroza.hair{href}"
-                        })
-                        titles_seen.add(title)
-            except:
-                continue
+                    await page.wait_for_selector('li.col-xs-6', timeout=10000)
+                    items = await page.query_selector_all('li.col-xs-6')
 
-        # حفظ البيانات
-        with open('laroza_content.json', 'w', encoding='utf-8') as f:
-            json.dump(movies_data, f, ensure_ascii=False, indent=4)
+                    if not items:
+                        print(f"⏹ لا يوجد مزيد من الأفلام في صفحة {current_page}.")
+                        break
 
-        print(f"✅ اكتملت المهمة! تم جمع {len(movies_data)} عنوان من لاروزا.")
+                    for item in items:
+                        try:
+                            link_tag = await item.query_selector('h3 a')
+                            if not link_tag: continue
+                            
+                            full_title = await link_tag.get_attribute('title')
+                            href = await link_tag.get_attribute('href')
+                            
+                            if any(word in full_title.lower() for word in blacklist):
+                                continue
+
+                            img_tag = await item.query_selector('img.img-responsive')
+                            image_url = ""
+                            if img_tag:
+                                image_url = await img_tag.get_attribute('data-src') or \
+                                            await img_tag.get_attribute('data-lazy-src') or \
+                                            await img_tag.get_attribute('data-original') or \
+                                            await img_tag.get_attribute('src')
+
+                            clean_name = full_title.replace("مشاهدة", "").replace("فيلم", "").replace("اون لاين", "").replace("لاروزا", "").strip()
+                            year_match = re.search(r'(\d{4})', clean_name)
+                            year = int(year_match.group(1)) if year_match else 2025
+                            
+                            all_movies.append({
+                                "name": f"[لاروزا] {clean_name}",
+                                "url": href if href.startswith('http') else f"https://laroza.makeup/{href}",
+                                "image_url": image_url,
+                                "year": year,
+                                "genre": "أفلام",
+                                "rating": 0.0,
+                                "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                            })
+                        except:
+                            continue
+                    
+                except Exception as e:
+                    print(f"⚠️ خطأ في {url}: {str(e)[:40]}")
+                    break # الانتقال للقسم التالي عند حدوث خطأ أو انتهاء الصفحات
+
         await browser.close()
+        
+        if all_movies:
+            # تنظيف التكرار
+            unique_movies = {m['url']: m for m in all_movies}.values()
+            with open('laroza_movies.json', 'w', encoding='utf-8') as f:
+                json.dump(list(unique_movies), f, ensure_ascii=False, indent=4)
+            print(f"✅ اكتمل! تم حفظ {len(unique_movies)} فيلم فريد.")
 
 if __name__ == "__main__":
-    asyncio.run(scrape_laroza())
+    # للاختبار نسحب صفحة واحدة من كل قسم، ارفع الرقم لجلب كل شيء
+    asyncio.run(scrape_laroza_movies())

@@ -3,58 +3,69 @@ name: Global Media Scraper
 on:
   schedule:
     - cron: '0 0 * * 0' # أسبوعياً (الأحد الساعة 12 منتصف الليل)
-  workflow_dispatch: # تشغيل يدوي
+  workflow_dispatch: # إمكانية التشغيل اليدوي للتحقق من النتائج
 
 jobs:
   scrape_all:
     runs-on: ubuntu-latest
 
+    # السماح للأكشن بالكتابة في المستودع
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # هذا السطر يضمن سحب كل تاريخ الملفات لتجنب مشاكل الـ Push
-          fetch-depth: 0 
+          fetch-depth: 0 # سحب كامل التاريخ لتجنب مشاكل الـ Rebase
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install Dependencies
         run: |
-          pip install playwright
+          python -m pip install --upgrade pip
+          # تثبيت المكتبات المطلوبة لجميع المواقع
+          pip install playwright requests beautifulsoup4
+          # تثبيت متصفح Chromium المطلوب لـ Playwright
           playwright install chromium
 
-      - name: Run Scrapers
+      - name: Run All Scrapers
         run: |
-          # تشغيل كل ملفات السحب
-          python akoam_movies_scraper.py
-          python akoam_series_scraper.py
-          python mycima_movies_scraper.py
-          python mycima_series_scraper.py
-          # python fushaar_scraper.py
+          echo "🚀 البدء في عملية سحب البيانات من جميع المصادر..."
           
-          # دمج كل النتائج في ملف all_data.json
-          python main.py 
+          # ملاحظة: استخدمنا "|| true" لضمان استمرار العملية حتى لو فشل أحد السكريبتات
+          python akoam_movies_scraper.py || true
+          python akoam_series_scraper.py || true
+          python mycima_movies_scraper.py || true
+          python mycima_series_scraper.py || true
+          python fushaar_movies_scraper.py || true
+          python fushaar_series_scraper.py || true
+          python egibest_movies_scraper.py || true
+          python egibest_series_scraper.py || true
+          python laroza_movies_scraper.py || true
+          python laroza_series_scraper.py || true
+          
+          # دمج كل النتائج في الملف النهائي all_data.json
+          python main.py || echo "⚠️ فشل دمج البيانات النهائية"
 
       - name: Commit and Push Changes
         run: |
+          # إعداد هوية البوت
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # 1. سحب آخر التغييرات من جيت هوب
-          git fetch origin main
+          # إضافة جميع ملفات JSON الناتجة
+          git add *.json
           
-          # 2. إضافة الملفات الجديدة
-          git add *.json 
+          # عمل الـ Commit مع تجاهل الخطأ إذا لم تكن هناك تغييرات
+          git commit -m "Update all media data: $(date +'%Y-%m-%d %H:%M')" || exit 0
           
-          # 3. عمل الـ Commit
-          git commit -m "Update all media data: $(date)" || exit 0
-          
-          # 4. حل التعارضات لصالح الملفات اللي السكرابر لسه مطلعها (The trick)
-          # هذا الأمر يخبر جيت: لو لقيت تعارض في الملفات، خد النسخة بتاعت الأكشن (ours)
+          # التحديث من المستودع مع حل التعارضات لصالح الملفات الجديدة (التي تم سحبها الآن)
+          # استراتيجية -X ours تعني: "في حال وجود تعارض، اعتمد النسخة الموجودة حالياً في الـ Runner"
           git pull origin main --rebase -X ours
           
-          # 5. الرفع النهائي
+          # الرفع النهائي للمستودع
           git push origin main

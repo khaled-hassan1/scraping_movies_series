@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 import re
 
-async def scrape_mycima_safe(max_pages=1):
+async def scrape_mycima_safe(max_pages=None):
     all_movies = [] 
     # كلمات الحظر
     blacklist = ["+18", "للكبار فقط", "افلام جنس", "جنسي", "sex", "adult", "18+"]

@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 import re
 
-async def scrape_mycima_series(max_pages=1):
+async def scrape_mycima_series(max_pages=None):
     all_series = [] 
     blacklist = ["+18", "للكبار فقط", "جنس", "sex", "adult", "18+"]
     
