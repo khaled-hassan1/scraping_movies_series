@@ -4,7 +4,8 @@ import json
 from datetime import datetime
 import re
 
-async def scrape_egibest(max_pages=2):
+# تغيير القيمة الافتراضية إلى None
+async def scrape_egibest(max_pages=None):
     all_movies = [] 
     browser_instance = None
     blacklist = ["+18", "للكبار فقط", "جنس", "sex", "adult", "18+"]
@@ -18,39 +19,43 @@ async def scrape_egibest(max_pages=2):
             page = await context.new_page()
             
             current_page = 1
-            while current_page <= max_pages:
-                # الرابط بناءً على بنية الموقع
+            while True:
+                # شرط التوقف: لو وصلنا للحد المطلوب (لو max_pages مش None)
+                if max_pages is not None and current_page > max_pages:
+                    break
+
                 url = f"https://egibest.live/movies/page/{current_page}/"
                 print(f"📡 جاري سحب إيجي بست (صفحة {current_page})...")
                 
                 try:
-                    await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-                    await asyncio.sleep(3) # انتظار بسيط للتأكد من تحميل العناصر
+                    response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                    
+                    # لو الموقع رجع 404 أو الصفحة مش موجودة يبقى خلصنا
+                    if response.status == 404:
+                        print(f"🏁 وصلنا لنهاية الصفحات عند الصفحة {current_page}")
+                        break
 
-                    # السيلكتور الصحيح بناءً على ملف ع.txt اللي بعته
+                    await asyncio.sleep(2) # انتظار بسيط
+
                     items = await page.query_selector_all('a.postBlockCol')
                     
+                    # لو الصفحة اشتغلت بس مفيهاش أفلام يبقى السحب خلص
                     if not items:
-                        print(f"⚠️ لم يتم العثور على عناصر. جاري محاولة سيلكتور بديل...")
-                        items = await page.query_selector_all('div#loadPost a')
+                        print(f"🛑 لا يوجد المزيد من العناصر. توقف السحب عند صفحة {current_page}")
+                        break
 
                     for item in items:
                         try:
-                            # 1. استخراج العنوان من h3.title
                             title_tag = await item.query_selector('h3.title')
                             title = await title_tag.inner_text() if title_tag else ""
                             
                             if not title or any(word in title.lower() for word in blacklist):
                                 continue
 
-                            # 2. استخراج الرابط
                             href = await item.get_attribute('href')
-
-                            # 3. استخراج الصورة
                             img_tag = await item.query_selector('img')
                             image_url = await img_tag.get_attribute('src') if img_tag else ""
-
-                            # 4. استخراج التقييم (لو موجود)
+                            
                             rating_tag = await item.query_selector('span.r i.rating i')
                             rating = await rating_tag.inner_text() if rating_tag else "0.0"
 
@@ -71,20 +76,21 @@ async def scrape_egibest(max_pages=2):
                     
                     print(f"✅ تم سحب {len(items)} عنصر من صفحة {current_page}")
                     current_page += 1
+                    
                 except Exception as e:
-                    print(f"❌ توقف السحب عند صفحة {current_page}: {e}")
+                    print(f"❌ حدث خطأ أو توقف الاتصال عند صفحة {current_page}: {e}")
                     break
     finally:
         if all_movies:
             unique_movies = list({m['url']: m for m in all_movies}.values())
+            # تنبيه: بما إنك هتسحب "كله"، الملف ممكن يكون كبير، جرب تقسمه زي ما عملنا في لاروزا لو زاد عن 50 ميجا
             with open('egibest_movies.json', 'w', encoding='utf-8') as f:
                 json.dump(unique_movies, f, ensure_ascii=False, indent=4)
             print(f"🏁 انتهى! تم حفظ {len(unique_movies)} فيلم في egibest_movies.json")
-        else:
-            print("❌ فشل السحب: لم يتم العثور على أي بيانات. تأكد من أن الرابط movies متاح.")
         
         if browser_instance:
             await browser_instance.close()
 
 if __name__ == "__main__":
+    # هنا هينادي عليها بـ None تلقائياً فيسحب كل حاجة
     asyncio.run(scrape_egibest())
