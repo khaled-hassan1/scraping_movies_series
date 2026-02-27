@@ -3,24 +3,27 @@ from playwright.async_api import async_playwright
 import json
 from datetime import datetime
 import re
+import os
 
-# تغيير القيمة الافتراضية إلى None
 async def scrape_egibest(max_pages=None):
     all_movies = [] 
-    browser_instance = None
+    browser_instance = None # لضمان إغلاق المتصفح لاحقاً
     blacklist = ["+18", "للكبار فقط", "جنس", "sex", "adult", "18+"]
     
     try:
         async with async_playwright() as p:
+            # 1. تشغيل المتصفح مع إعدادات الأداء العالي
             browser_instance = await p.chromium.launch(headless=True)
             context = await browser_instance.new_context(
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             )
             page = await context.new_page()
             
+            # 2. منع تحميل الصور لتسريع السحب وتوفير الرام (تحسين أداء)
+            await page.route("**/*.{png,jpg,jpeg,webp,gif}", lambda route: route.abort())
+
             current_page = 1
             while True:
-                # شرط التوقف: لو وصلنا للحد المطلوب (لو max_pages مش None)
                 if max_pages is not None and current_page > max_pages:
                     break
 
@@ -30,18 +33,17 @@ async def scrape_egibest(max_pages=None):
                 try:
                     response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
                     
-                    # لو الموقع رجع 404 أو الصفحة مش موجودة يبقى خلصنا
                     if response.status == 404:
                         print(f"🏁 وصلنا لنهاية الصفحات عند الصفحة {current_page}")
                         break
 
-                    await asyncio.sleep(2) # انتظار بسيط
+                    await asyncio.sleep(2) # انتظار بسيط لاستقرار العناصر
 
+                    # السيلكتور الجديد بناءً على ملف ع.txt
                     items = await page.query_selector_all('a.postBlockCol')
                     
-                    # لو الصفحة اشتغلت بس مفيهاش أفلام يبقى السحب خلص
                     if not items:
-                        print(f"🛑 لا يوجد المزيد من العناصر. توقف السحب عند صفحة {current_page}")
+                        print(f"🛑 لا يوجد المزيد من العناصر عند صفحة {current_page}")
                         break
 
                     for item in items:
@@ -78,19 +80,36 @@ async def scrape_egibest(max_pages=None):
                     current_page += 1
                     
                 except Exception as e:
-                    print(f"❌ حدث خطأ أو توقف الاتصال عند صفحة {current_page}: {e}")
+                    print(f"❌ خطأ في صفحة {current_page}: {e}")
                     break
+    
+    except Exception as e:
+        print(f"❌ حدث خطأ غير متوقع في المحرك: {e}")
+
     finally:
-        if all_movies:
-            unique_movies = list({m['url']: m for m in all_movies}.values())
-            # تنبيه: بما إنك هتسحب "كله"، الملف ممكن يكون كبير، جرب تقسمه زي ما عملنا في لاروزا لو زاد عن 50 ميجا
-            with open('egibest_movies.json', 'w', encoding='utf-8') as f:
-                json.dump(unique_movies, f, ensure_ascii=False, indent=4)
-            print(f"🏁 انتهى! تم حفظ {len(unique_movies)} فيلم في egibest_movies.json")
-        
+        # --- التحسين رقم 2: قتل العمليات المعلقة (تنظيف الذاكرة) ---
         if browser_instance:
             await browser_instance.close()
+            print("🔒 تم إغلاق المتصفح بنجاح وتنظيف العمليات اليتيمة.")
+
+        # --- الحفظ بنظام الـ Chunks لضمان القبول على GitHub ---
+        if all_movies:
+            unique_movies = list({m['url']: m for m in all_movies}.values())
+            total_count = len(unique_movies)
+            chunk_size = 10000 
+            
+            print(f"📦 إجمالي الأفلام: {total_count}. جاري الحفظ والتقسيم...")
+
+            for i in range(0, total_count, chunk_size):
+                chunk = unique_movies[i : i + chunk_size]
+                part_num = (i // chunk_size) + 1
+                filename = f"egibest_movies_part{part_num}.json"
+                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(chunk, f, ensure_ascii=False, indent=4)
+                print(f"💾 تم حفظ الجزء {part_num} في: {filename}")
+        else:
+            print("ℹ️ لم يتم العثور على أي بيانات.")
 
 if __name__ == "__main__":
-    # هنا هينادي عليها بـ None تلقائياً فيسحب كل حاجة
     asyncio.run(scrape_egibest())
