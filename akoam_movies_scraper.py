@@ -2,13 +2,15 @@ import asyncio
 from playwright.async_api import async_playwright
 import json
 from datetime import datetime
+import os
 
 async def scrape_akoam(max_pages=None):
     all_movies = [] 
-    browser_instance = None # تغيير الاسم لتجنب التضارب
+    browser_instance = None 
     
     try:
         async with async_playwright() as p:
+            # 1. تشغيل المتصفح
             browser_instance = await p.chromium.launch(headless=True)
             context = await browser_instance.new_context(
                 viewport={'width': 1280, 'height': 1000},
@@ -17,7 +19,6 @@ async def scrape_akoam(max_pages=None):
             page = await context.new_page()
             
             current_page = 1
-            
             while True:
                 if max_pages is not None and current_page > max_pages:
                     break
@@ -27,7 +28,6 @@ async def scrape_akoam(max_pages=None):
                 
                 try:
                     response = await page.goto(url, wait_until="domcontentloaded", timeout=90000)
-                    
                     if response.status == 404:
                         print(f"🛑 وصلنا لنهاية الصفحات عند الصفحة {current_page-1}")
                         break
@@ -36,9 +36,7 @@ async def scrape_akoam(max_pages=None):
                     await asyncio.sleep(2) 
 
                     items = await page.query_selector_all('.entry-box')
-                    
-                    if not items:
-                        break
+                    if not items: break
 
                     for item in items:
                         try:
@@ -58,45 +56,46 @@ async def scrape_akoam(max_pages=None):
                             genre_tags = await item.query_selector_all('.badge-light')
                             genres = [await g.inner_text() for g in genre_tags]
                             
-                            created_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
                             all_movies.append({
-                                "name": name.strip(),
+                                "name": f"[أكوام] {name.strip()}",
                                 "url": href if href.startswith('http') else f"https://ak.sv{href}",
                                 "image_url": image_url,
-                                "year": int(year_text.strip()) if year_text.strip().isdigit() else 2024,
-                                "genre": ", ".join(genres) if genres else "عام",
+                                "year": int(year_text.strip()) if year_text.strip().isdigit() else 2026,
+                                "genre": ", ".join(genres) if genres else "أفلام",
                                 "rating": float(rating_text.strip()) if rating_text else 0.0,
-                                "createdAt": created_at
+                                "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
                             })
-                        except Exception:
-                            continue
+                        except: continue
                     
                     current_page += 1
-                    
                 except Exception as e:
                     print(f"⚠️ خطأ أثناء تحميل الصفحة {current_page}: {e}")
                     break
 
-    except asyncio.CancelledError:
-        print("\n⚠️ تم استلام إشارة إيقاف (CancelledError).")
     except Exception as e:
         print(f"\n❌ حدث خطأ غير متوقع: {e}")
     
     finally:
-        # نقوم بالحفظ داخل الـ finally لضمان الحماية، لكن بدون return
+        # --- معالجة الـ Orphaned Processes ---
+        if browser_instance:
+            await browser_instance.close()
+            print("🔒 تم إغلاق المتصفح بنجاح لمنع العمليات المعلقة.")
+
+        # --- الحفظ مع التقسيم (Chunks) لمنع مشاكل GitHub ---
         if all_movies:
-            with open('akoam_movies.json', 'w', encoding='utf-8') as f:
-                json.dump(all_movies, f, ensure_ascii=False, indent=4)
-            print(f"\n✅ تم حفظ {len(all_movies)} فيلم في ملف akoam_movies.json")
+            unique_movies = list({m['url']: m for m in all_movies}.values())
+            chunk_size = 10000
+            for i in range(0, len(unique_movies), chunk_size):
+                chunk = unique_movies[i : i + chunk_size]
+                part = (i // chunk_size) + 1
+                filename = f'akoam_part{part}.json'
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(chunk, f, ensure_ascii=False, indent=4)
+                print(f"✅ تم حفظ {len(chunk)} فيلم في {filename}")
         else:
             print("\nℹ️ لم يتم جمع أي بيانات لحفظها.")
 
-    # الـ return الآن خارج بلوك الـ finally تماماً
     return all_movies
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(scrape_akoam())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(scrape_akoam())
