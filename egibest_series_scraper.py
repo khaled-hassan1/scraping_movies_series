@@ -31,7 +31,7 @@ async def scrape_egibest_series(max_pages=None):
                 if max_pages is not None and current_page > max_pages:
                     break
 
-                url = f"https://egibest.live/series/page/{current_page}/"
+                url = f"https://egibest.org/series/page/{current_page}/"
                 print(f"📡 جاري سحب مسلسلات إيجي بست (صفحة {current_page})...")
 
                 try:
