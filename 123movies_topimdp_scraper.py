@@ -9,7 +9,7 @@
 #     all_items = []
 #     browser_instance = None # لضمان إغلاق المتصفح وتنظيف العمليات
 #     base_url = "https://ww8.123moviesfree.net/top-imdb/all/"
-    
+
 #     try:
 #         async with async_playwright() as p:
 #             # 1. تشغيل المتصفح مع إعدادات الأداء العالي
@@ -18,21 +18,21 @@
 #                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 #             )
 #             page = await context.new_page()
-            
+
 #             # 2. منع تحميل الصور لتسريع السحب وتوفير الرام (تحسين أداء)
 #             await page.route("**/*.{png,jpg,jpeg,webp,gif}", lambda route: route.abort())
-            
+
 #             current_page = 1
 #             while True:
-#                 if max_pages is not None and current_page > max_pages: 
+#                 if max_pages is not None and current_page > max_pages:
 #                     break
-                
+
 #                 url = f"{base_url}?page={current_page}"
 #                 print(f"📡 جاري سحب IMDb صفحة {current_page}...")
-                
+
 #                 try:
-#                     response = await page.goto(url, wait_until="domcontentloaded", timeout=60000)
-#                     if response.status == 404: 
+#                     response = await page.goto(url, wait_until="domcontentloaded", timeout=90000)
+#                     if response.status == 404:
 #                         print(f"🏁 وصلنا لنهاية الصفحات عند {current_page - 1}")
 #                         break
 
@@ -59,7 +59,7 @@
 #                             if img_tag:
 #                                 image_url = await img_tag.get_attribute('data-src') or \
 #                                             await img_tag.get_attribute('src')
-                            
+
 #                             # استخراج السنة من العنوان إن وجدت
 #                             year_match = re.search(r'(\d{4})', title)
 #                             year = int(year_match.group(1)) if year_match else 2026
@@ -74,7 +74,7 @@
 #                                 "createdAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 #                             })
 #                         except: continue
-                    
+
 #                     print(f"✅ تم جمع {len(items)} عنصر من صفحة {current_page}")
 #                     current_page += 1
 #                 except Exception as e:
@@ -96,14 +96,14 @@
 #             unique_items = list({m['url']: m for m in all_items}.values())
 #             total_count = len(unique_items)
 #             chunk_size = 10000
-            
+
 #             print(f"📦 إجمالي العناصر: {total_count}. جاري الحفظ والتقسيم...")
 
 #             for i in range(0, total_count, chunk_size):
 #                 chunk = unique_items[i : i + chunk_size]
 #                 part_num = (i // chunk_size) + 1
 #                 filename = f'imdb_movies_part{part_num}.json'
-                
+
 #                 with open(filename, 'w', encoding='utf-8') as f:
 #                     json.dump(chunk, f, ensure_ascii=False, indent=4)
 #                 print(f"💾 تم حفظ الجزء {part_num} في: {filename}")
