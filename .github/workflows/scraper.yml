@@ -63,7 +63,21 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add all_data.json
-          git commit -m "Update all media data: $(date +'%Y-%m-%d %H:%M')" || exit 0
-          git pull origin main --rebase -X ours
-          git push origin main
+          
+          # محاولة الرفع مع التكرار في حالة الفشل
+          for i in {1..5}; do
+            git fetch origin main
+            git add all_data.json
+            git commit -m "Update DB: $(date +'%Y-%m-%d %H:%M')" || exit 0
+            
+            # عمل Rebase لسحب أي تغييرات حصلت في الـ 10 ثواني اللي فاتوا
+            if git pull origin main --rebase -X ours && git push origin main; then
+              echo "✅ تم الرفع بنجاح!"
+              exit 0
+            else
+              echo "⚠️ فشل الرفع، جاري المحاولة مرة أخرى رقم $i..."
+              sleep 5 # انتظر 5 ثواني قبل المحاولة الجاية
+            fi
+          done
+          echo "❌ فشل الرفع بعد 5 محاولات."
+          exit 1
