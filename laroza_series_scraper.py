@@ -25,10 +25,10 @@ async def scrape_laroza_series(max_pages=None):
             await page.route(
                 "**/*.{png,jpg,jpeg,webp,gif}", lambda route: route.abort()
             )
-
+            base_url = "https://larozza.xyz"
             current_page = 1
             while max_pages is None or current_page <= max_pages:
-                url = f"https://laroza.makeup/moslslat4.php?page={current_page}"
+                url = f"{base_url}/moslslat4.php?page={current_page}"
                 print(f"📡 جاري سحب مسلسلات لاروزا (صفحة {current_page})...")
 
                 try:

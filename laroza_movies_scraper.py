@@ -10,16 +10,16 @@ async def scrape_laroza_movies(max_pages_per_category=None):
     all_movies = []
     browser_instance = None  # لضمان الإغلاق الآمن في بلوك finally
     blacklist = ["+18", "للكبار فقط", "جنس", "sex", "adult", "18+"]
-
+    base_url = "https://larozza.xyz"
     movie_categories = [
-        "https://laroza.makeup/category.php?cat=all_movies_13",
-        "https://laroza.makeup/category.php?cat=arabic-movies33",
-        "https://laroza.makeup/category.php?cat=indian-movies9",
-        "https://laroza.makeup/category.php?cat=6-asian-movies",
-        "https://laroza.makeup/category.php?cat=anime-movies-7",
-        "https://laroza.makeup/category.php?cat=7-aflammdblgh",
-        "https://laroza.makeup/category.php?cat=8-aflam3isk",
-        "https://laroza.makeup/category.php?cat=masrh-5",
+        f"{base_url}/category.php?cat=all_movies_13",
+        f"{base_url}/category.php?cat=arabic-movies33",
+        f"{base_url}/category.php?cat=indian-movies9",
+        f"{base_url}/category.php?cat=6-asian-movies",
+        f"{base_url}/category.php?cat=anime-movies-7",
+        f"{base_url}/category.php?cat=7-aflammdblgh",
+        f"{base_url}/category.php?cat=8-aflam3isk",
+        f"{base_url}/category.php?cat=masrh-5",
     ]
 
     try:
