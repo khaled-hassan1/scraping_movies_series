@@ -30,7 +30,7 @@ async def scrape_egibest(max_pages=None):
                 if max_pages is not None and current_page > max_pages:
                     break
 
-                url = f"https://egibest.live/movies/page/{current_page}/"
+                url = f"https://egibest.org/movies/page/{current_page}/"
                 print(f"📡 جاري سحب إيجي بست (صفحة {current_page})...")
 
                 try:
