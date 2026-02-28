@@ -1,22 +1,37 @@
 import json
-import glob
+import os
 
 def combine_all_json():
     combined_data = []
     output_file = 'all_data.json'
     
-    # جلب كل ملفات الـ JSON في المجلد الحالي
-    all_json_files = glob.glob("*.json")
-    
-    # تصفية الملفات: استبعاد الملف النهائي وأي ملفات مخفية
-    json_files_to_read = [
-        f for f in all_json_files 
-        if f != output_file and not f.startswith('.')
+    # 1. تحديد الترتيب الذي تريده (اسم الملف أو جزء منه)
+    # تأكد أن الأسماء هنا تطابق أسماء الملفات التي تخرج من السكريبتات
+    priority_order = [
+        "fushaar",   # فشار أولاً
+        "akoam",     # أكوام ثانياً
+        "laroza"     # لاروزا ثالثاً
     ]
     
-    print(f"📂 جاري دمج الملفات التالية: {json_files_to_read}")
+    # جلب كل ملفات الـ JSON الموجودة حالياً
+    all_files = [f for f in os.listdir('.') if f.endswith('.json') and f != output_file and not f.startswith('.')]
+    
+    # 2. ترتيب الملفات بناءً على القائمة المحددة
+    ordered_files = []
+    
+    # أولاً: أضف الملفات التي تتبع الترتيب المطلوب
+    for keyword in priority_order:
+        for f in all_files:
+            if keyword in f.lower():
+                ordered_files.append(f)
+                all_files.remove(f) # إزالة من القائمة حتى لا يتكرر
+    
+    # ثانياً: أضف أي ملفات أخرى متبقية (مثل mycima, egibest الخ) في النهاية
+    ordered_files.extend(all_files)
+    
+    print(f"📂 الترتيب النهائي للدمج: {ordered_files}")
 
-    for file in json_files_to_read:
+    for file in ordered_files:
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -32,7 +47,7 @@ def combine_all_json():
     if combined_data:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(combined_data, f, ensure_ascii=False, indent=4)
-        print(f"🏁 تم إنشاء الملف الجامع بنجاح: {output_file} بإجمالي {len(combined_data)} عنصر.")
+        print(f"🏁 تم إنشاء الملف بنجاح بترتيبك الخاص بإجمالي {len(combined_data)} عنصر.")
     else:
         print("ℹ️ لا توجد بيانات لدمجها.")
 

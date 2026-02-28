@@ -2,68 +2,68 @@ name: Global Media Scraper
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # تشغيل تلقائي كل أحد الساعة 12 منتصف الليل
-  workflow_dispatch: # إمكانية التشغيل اليدوي
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
 
 jobs:
-  scrape_all:
+  # مصفوفة المواقع (Strategy Matrix)
+  # دي حركة ذكية بتخلينا نكتب الكود مرة واحدة وهو يكرره لكل موقع لوحده
+  scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 300 # 5 ساعات كاملة ليعمل السحب براحته دون انقطاع
+    strategy:
+      fail-fast: false # عشان لو موقع فشل الباقي يكمل عادي
+      matrix:
+        scraper: [
+          "akoam_movies_scraper.py", "akoam_series_scraper.py",
+          "mycima_movies_scraper.py", "mycima_series_scraper.py",
+          "fushaar_movies_scraper.py", "fushaar_series_scraper.py",
+          "egibest_movies_scraper.py", "egibest_series_scraper.py",
+          "laroza_movies_scraper.py", "laroza_series_scraper.py",
+          "123movies_movies_scraper.py", "123movies_series_scraper.py"
+        ]
+    timeout-minutes: 120 # ساعتين كفاية جداً لكل سكريبت لوحده
     
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4 # تحديث للإصدار الرابع (أسرع وأكثر أماناً)
-        with:
-          fetch-depth: 0 
-
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install playwright requests beautifulsoup4
           python -m playwright install chromium
+      - name: Run Scraper
+        run: python ${{ matrix.scraper }} || true
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # بنسمي الأرتيفاكت باسم السكريبت عشان ميتلخبطوش
+          name: data-${{ strategy.job-index }}
+          path: "*.json"
 
-      - name: Run All Scrapers
-        run: |
-          echo "🚀 بدء سحب البيانات من جميع المواقع..."
-          
-          # تشغيل السكريبتات بالترتيب مع ضمان استمرار العملية حتى لو سقط موقع
-         
-          python akoam_movies_scraper.py || true
-          python akoam_series_scraper.py || true
-          python mycima_movies_scraper.py || true
-          python mycima_series_scraper.py || true
-          python fushaar_movies_scraper.py || true
-          python fushaar_series_scraper.py || true
-          python egibest_movies_scraper.py || true
-          python egibest_series_scraper.py || true
-          python laroza_movies_scraper.py || true
-          python laroza_series_scraper.py || true
-          python 123movies_movies_scraper.py || true
-          python 123movies_series_scraper.py || true
-          
-          echo "🔗 دمج الملفات في قاعدة البيانات النهائية..."
-          python main.py || echo "⚠️ فشل في الدمج النهائي"
-
-      - name: Commit and Push Changes
+  # مهمة التجميع والرفع (تنتظر كل اللي فوق يخلصوا)
+  merge_and_push:
+    runs-on: ubuntu-latest
+    needs: scrape
+    if: always()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Run Main Merger
+        run: python main.py
+      - name: Commit and Push
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          git fetch origin main
-          git add *.json
-          
-          # الالتزام بالتغييرات فقط في حال وجود ملفات جديدة
+          git add all_data.json
           git commit -m "Update all media data: $(date +'%Y-%m-%d %H:%M')" || exit 0
-          
-          # استراتيجية Rebase ذكية: لو حدث تعارض، اعتمد الملفات الجديدة فوراً (X ours)
           git pull origin main --rebase -X ours
-          
           git push origin main
