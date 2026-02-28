@@ -18,8 +18,8 @@ jobs:
           "mycima_movies_scraper.py", "mycima_series_scraper.py",
           "fushaar_movies_scraper.py", "fushaar_series_scraper.py",
           "egibest_movies_scraper.py", "egibest_series_scraper.py",
-          "laroza_movies_scraper.py", "laroza_series_scraper.py",
-          "123movies_movies_scraper.py", "123movies_series_scraper.py"
+          "laroza_movies_scraper.py", "laroza_series_scraper.py"
+          # "123movies_movies_scraper.py", "123movies_series_scraper.py"
         ]
     timeout-minutes: 120 # ساعتين كفاية جداً لكل سكريبت لوحده
     
