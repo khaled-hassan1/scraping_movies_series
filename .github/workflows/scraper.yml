@@ -2,7 +2,7 @@ name: Global Media Scraper
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # تشغيل تلقائي كل أحد
+    - cron: '0 7 1-7,15-21 * 5'
   workflow_dispatch: # تشغيل يدوي
 
 jobs:
@@ -16,8 +16,8 @@ jobs:
           "mycima_movies_scraper.py", "mycima_series_scraper.py",
           "fushaar_movies_scraper.py", "fushaar_series_scraper.py",
           "egibest_movies_scraper.py", "egibest_series_scraper.py",
-          "laroza_movies_scraper.py", "laroza_series_scraper.py"
-          # "123movies_movies_scraper.py", "123movies_series_scraper.py"
+          "laroza_movies_scraper.py", "laroza_series_scraper.py",
+          "123movies_movies_scraper.py", "123movies_series_scraper.py"
         ]
     timeout-minutes: 120
     
@@ -49,28 +49,42 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          lfs: true # تفعيل دعم الملفات الكبيرة
+          lfs: true
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           merge-multiple: true
 
-      - name: Run Main Merger
-        run: python main.py
+      - name: Run Main Merger and Create Index
+        run: |
+          # تشغيل سكريبت الدمج والتقسيم الأساسي
+          python main.py
+          
+          # تشغيل سكريبت إنشاء الفهرس (Search Index)
+          if [ -f "create_index.py" ]; then
+            python create_index.py
+          else
+            echo "⚠️ create_index.py not found, skipping index creation."
+          fi
 
       - name: Commit and Push
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # إضافة الملف الأساسي ومجلد التقسيمات الجديد
+          # إضافة الملفات الناتجة (all_data، مجلد db، والفهرس الجديد)
           git add all_data.json db/
           
-          # الالتزام بالتغييرات
-          git commit -m "Update DB & Pages: $(date +'%Y-%m-%d %H:%M')" || exit 0
+          # التحقق إذا كان هناك تغييرات فعلاً قبل الـ commit
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update DB, Pages & Search Index: $(date +'%Y-%m-%d %H:%M')"
           
-          # محاولة الرفع مع إعادة المحاولة في حالة وجود تعارض (Rebase)
+          # محاولة الرفع مع التعامل مع التضارب (Retries)
           for i in {1..5}; do
             git pull origin main --rebase -X ours
             if git push origin main; then
