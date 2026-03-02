@@ -27,7 +27,7 @@ async def scrape_mycima_series(max_pages=None):
 
             current_page = 1
             while max_pages is None or current_page <= max_pages:
-                url = f"https://my-cima.pro/categories-4cima.php?cat=mosalsalat-4Cima-6&page={current_page}&order=DESC"
+                url = f"https://my-cima.lat/categories-4cima.php?cat=mosalsalat-4Cima-6&page={current_page}&order=DESC"
                 print(f"📡 جاري سحب ماي سيما مسلسلات (صفحة {current_page})...")
 
                 try:
