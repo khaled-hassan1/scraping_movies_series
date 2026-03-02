@@ -56,18 +56,35 @@ jobs:
         with:
           merge-multiple: true
 
-      - name: Run Main Merger
-        run: python main.py
+      - name: Run Main Merger and Create Index
+        run: |
+          # تشغيل سكريبت الدمج والتقسيم الأساسي
+          python main.py
+          
+          # تشغيل سكريبت إنشاء الفهرس (Search Index)
+          if [ -f "create_index.py" ]; then
+            python create_index.py
+          else
+            echo "⚠️ create_index.py not found, skipping index creation."
+          fi
 
       - name: Commit and Push
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
+          # إضافة الملفات الناتجة (all_data، مجلد db، والفهرس الجديد)
           git add all_data.json db/
           
-          git commit -m "Update DB & Pages: $(date +'%Y-%m-%d %H:%M')" || exit 0
+          # التحقق إذا كان هناك تغييرات فعلاً قبل الـ commit
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update DB, Pages & Search Index: $(date +'%Y-%m-%d %H:%M')"
           
+          # محاولة الرفع مع التعامل مع التضارب (Retries)
           for i in {1..5}; do
             git pull origin main --rebase -X ours
             if git push origin main; then
