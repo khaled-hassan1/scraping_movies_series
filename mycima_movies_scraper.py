@@ -27,7 +27,7 @@ async def scrape_mycima_movies(max_pages=None):
 
             current_page = 1
             while max_pages is None or current_page <= max_pages:
-                url = f"https://my-cima.pro/topvideos-mycima.php?&page={current_page}"
+                url = f"https://my-cima.lat/topvideos-mycima.php?&page={current_page}"
                 print(f"📡 جاري سحب ماي سيما أفلام (صفحة {current_page})...")
 
                 try:
