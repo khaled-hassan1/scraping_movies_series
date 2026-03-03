@@ -18,6 +18,15 @@
         "genre": "عام",
         "url": "https://topcinema.fan/"
       },
+      {
+        "id": "s2wm1mlw",
+        "name": "DramaCafe",
+        "imageUrl": "https://i.postimg.cc/CxPtg0Fp/ʿnwan-frʿy.png",
+        "rating": 0,
+        "year": 2026,
+        "genre": "عام",
+        "url": "https://dramacafe-tv.cc/"
+      },
        {
         "id": "hhdukewhfu83e",
         "name": "Vumoo",
@@ -46,6 +55,33 @@
         "url": "https://www.deep-drama.com/"
       },
       {
+        "id": "aHR0cHM6Ly93d3cuYXNpYWFyLmZ1bi8",
+        "name": "DramaCool9",
+        "imageUrl": "https://i.postimg.cc/L4gZk3qZ/ʿnwan-frʿy-(1).png",
+        "rating": 0,
+        "year": 2026,
+        "genre": "عام",
+        "url": "https://dramacool9.com.ro/"
+      },
+      {
+        "id": "aHR0cHM6Ly93d3cuYXNpYWFyLmZ1bi8",
+        "name": "KShow123",
+        "imageUrl": "https://i.postimg.cc/Ss2jrmKk/ʿnwan-frʿy.png",
+        "rating": 0,
+        "year": 2026,
+        "genre": "عام",
+        "url": "https://kshow123.tv/"
+      },
+      {
+        "id": "aHR0cHM6LypYWFyLmZ1bi8",
+        "name": "Viu",
+        "imageUrl": "https://i.postimg.cc/XJm47F3h/ʿnwan-frʿy-(24).png",
+        "rating": 0,
+        "year": 2026,
+        "genre": "عام",
+        "url": "https://watch.viu.com/ott/eg"
+      },
+      {
         "id": "aHR0cHM6Ly93d3cuZGFpbHltb3Rpb24uY29tL0VneUJlc3RPZmZpY2lhbA",
         "name": "Dailymotion",
         "imageUrl": "https://i.postimg.cc/ZnxKqnR0/عنوان_فرعي_(4).png",
@@ -70,7 +106,7 @@
         "rating": 0,
         "year": 2025,
         "genre": "عام",
-        "url": "https://fushar.space/home"
+        "url": "https://fushar.beauty/home"
       },
       {
         "id": "aHR0cHM6Ly94N2s5Zi5zYnMv",
