@@ -1,9 +1,10 @@
 name: Global Media Scraper
 
+# Workflow is currently disabled. To re-enable, uncomment the triggers below.
 on:
   schedule:
     # - cron: '0 7 1-7,15-21 * 5'
-  workflow_dispatch: # تشغيل يدوي
+  # workflow_dispatch: # تشغيل يدوي
 
 jobs:
   scrape:
